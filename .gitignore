@@ -1,0 +1,7 @@
+**/node_modules
+/web/out
+/web/dist
+/out
+**/.DS_Store
+/.beaver
+.ignore
