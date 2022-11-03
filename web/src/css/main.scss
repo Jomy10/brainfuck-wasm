@@ -1,0 +1,43 @@
+$mono-spaced-fonts: Monaco, "JetBrains Mono", "Fira Code", "Comic Code", "Andale Mono", "Ubuntu Mono", "Courier New", "Courier";
+
+#app {
+  margin: 25px;
+  display: grid;
+  grid-template-columns: 1fr;
+  grid-template-rows: auto;
+}
+
+#bf-input {
+  width: 100%;
+  height: 10em;
+  font-family: $mono-spaced-fonts;
+  font-size: 0.9em;
+}
+
+#program-input {
+  width: 100%;
+  font-family: $mono-spaced-fonts;
+}
+
+#bf-output {
+  width: 100%;
+  font-size: 0.9em;
+  font-family: $mono-spaced-fonts;
+}
+
+.interrupt-button {
+  --primary: #d81b60;
+  --primary-hover: #f91e63;  
+}
+
+.null-button {
+  width: fit-content;
+}
+
+.horizontal-container {
+  display: flex;
+
+  & *:not(:last-child) {
+    margin-right: 15px;
+  }
+}

@@ -4,14 +4,25 @@
     <meta charset="UTF-8" />
     <!--link rel="icon" type="image/svg+xml" href="/vite.svg" /-->
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="stylesheet" href="src/css/main.scss">
+    <link rel="stylesheet" href="node_modules/@picocss/pico/css/pico.min.css">
     <title>Brainfuck</title>
   </head>
   <body>
     <div id="app">
-      <input type="text" id="bf-input" name="brainfuck-input"></input>
-      <button id="bf-run">run</button>
-      <!--Whitespace attribute makes it so that new lines are displayed-->
-      <span id="bf-output" style="white-space: pre-line"></span>
+      <main class="container">
+        <textarea rows = "5" cols = "60" id="bf-input" name="brainfuck-input"></textarea>
+        <div class="horizontal-container">
+          <input type="text" id="program-input" name="program-input"></input>
+          <button id="bf-add-null" class="null-button">null</button>
+        </div>
+        <div class="grid">
+          <button id="bf-run">run</button>
+          <button id="bf-interrupt" class="interrupt-button">interrupt</button>
+        </div>
+        <!--Whitespace attribute makes it so that new lines are displayed-->
+        <span id="bf-output" style="white-space: pre-line"></span>
+      </main>
     </div>
     <script type="module" src="/src/main.ts"></script>
   </body>

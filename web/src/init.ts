@@ -1,15 +1,14 @@
-//@ts-ignore
 import wasmInit from "./../out/main.wasm?init";
 
 export type WasmExports = {
   exec_char: (char: number) => number;
   memory: WebAssembly.Memory;
 
-  // Call after setting input in memory
+  /** Call after setting input in memory */
   read_input: () => void;
-  /// Store the current program poiter into the loop buffer
+  /** Store the current program poiter into the loop buffer */
   store_program_pointer: (pp: number) => void;
-  /// Returns the new program counter
+  /** Returns the new program counter */
   jump: () => number;
   
   MEM_PTR: WebAssembly.Global;

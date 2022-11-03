@@ -1,84 +1,95 @@
-import type { WasmExports } from './init';
-import exports from './init';
+import RunWorker from './run.ts?worker';
+import { MainThreadMessageType, WorkerMessage, WorkerMessageType } from './worker_types';
 
-const input: HTMLInputElement = document.querySelector("#bf-input")!;
+const input: HTMLTextAreaElement = document.querySelector("#bf-input")!;
 const outputSpan: HTMLSpanElement = document.querySelector("#bf-output")!;
+const programInput: HTMLInputElement = document.querySelector("#program-input")!;
 
-document.querySelector("#bf-run")?.addEventListener('click', (e) => {
-  e.preventDefault();
+if (!window.Worker) {
+  console.error("Browser does not support web workers.");
+}
+
+const webWorker: Worker = new RunWorker();
+let awaitingInput = 0;
+let cancelInput = false;
+
+// on run program
+document.querySelector("#bf-run")?.addEventListener('click', (_) => {
+  // clear output
+  outputSpan.textContent = "";
   
-  (async () => {
-    // Clear ouput
-    outputSpan!.textContent = "";
-    let call = await exports;
-    const promise: Promise<string> = new Promise((resolve, _rejext) => {
-      exec_brainfuck(
-        input.value, 
-        call,
-        // Output callback
-        (v) => {
-          outputSpan!.textContent += v;
-        }
-      ).then(() => {
-        resolve("Proram finished");
-      });
-    });
-
-    let returnVal = await asyncCallWithTimeout(promise, 1000);
-    console.info(returnVal);
-    // clear all memory used by the program
-    call.clear_mem();
-  })();
+  // Ask the web worker to execute the brainfuck code
+  webWorker.postMessage({
+    type: MainThreadMessageType.SourceCode,
+    value: input.value
+  });
+  
+  // Message received from worker
+  webWorker.onmessage = (e: MessageEvent<WorkerMessage>) => {
+    console.debug("Received message from worker thread", e);
+    if (e.data.type == WorkerMessageType.ProgramOutput) {
+      // on program output
+      outputSpan!.textContent += e.data.value as string;
+    } else if (e.data.type == WorkerMessageType.AskForInput) {
+      awaitInput()
+        .then((n) => {
+          if (n != null) {
+            --awaitingInput;
+            webWorker.postMessage({
+              type: MainThreadMessageType.Input,
+              value: n
+            });
+          } 
+        }).catch((_) => {});
+    }
+  };
 });
 
-async function exec_brainfuck(source: string, exports: WasmExports, print: (i: string) => void) {
-  let mem = new Uint8Array(exports.memory.buffer);
-  for_loop: for (let i = 0; i < source.length; i++) {
-    let c = source.charCodeAt(i);
-    let return_val = exports.exec_char(c);
-    
-    // console.log("current i", i, return_val, c, mem[exports.MEM_PTR.value]);
-    // break;
-    switch (return_val) {
-      case 1:
-        // needs input
-        mem[30000] = await receive_input();
-        exports.read_input();
-        break;
-      case 2:
-        print(String.fromCharCode(mem[30001]));
-        break;
-      case 3:
-        exports.store_program_pointer(i);
-        break;
-      case 4:
-        i = exports.jump() - 1; // because i is incremented next iteration
-        if (i == -1) {
-          break for_loop;
-        }
-        break;
+/** Retrieves input from the user. Takes one character from the input buffer field */
+async function awaitInput(): Promise<number> {
+  awaitingInput++;
+
+  while (programInput.value == "") {
+    if (cancelInput == true) {
+      cancelInput = false;
+      throw new Error("");
     }
+
+    await new Promise(r => setTimeout(r, 100));
   }
+  
+  let firstChar = programInput.value.charCodeAt(0);
+  programInput.value = programInput.value.substring(1, programInput.value.length);
+  
+  return firstChar
 }
 
-async function asyncCallWithTimeout(asyncPromise: Promise<string>, timeLimit: number): Promise<string> {
-  let timeoutHandle: number;
-  
-  const timeoutPromise: Promise<string> = new Promise((_resolve, reject) => {
-    timeoutHandle = setTimeout(
-      () => reject(new Error("Async call timeout limit reached.")),
-      timeLimit
-    );
+const interruptButton = document.querySelector("#bf-interrupt");
+// On interupt
+interruptButton?.addEventListener('click', (_) => {
+  webWorker.postMessage({
+    type: MainThreadMessageType.ProgramInterrupt,
+    value: 1
   });
   
-  return Promise.race([asyncPromise, timeoutPromise]).then((result) => {
-    clearTimeout(timeoutHandle);
-    return result;
-  });
-}
+  while (awaitingInput > 0) {
+    awaitingInput--;
+    programInput.value += "#";
+  }
+});
 
-async function receive_input(): Promise<number> {
-  return 0;
-}
+const escButton = document.querySelector("#bf-add-null");
+escButton?.addEventListener('click', (_) => {
+  if (awaitingInput > 0) {
+    cancelInput = true;
+  }
+  
+  awaitingInput--;
+  // Send null character (0)
+  webWorker.postMessage({
+    type: MainThreadMessageType.Input,
+    value: 0
+  });
+});
 
 export {};
